@@ -14,7 +14,7 @@ account switching.
 
 ```sh
 npm i -g codex-auth
-git clone https://github.com/OWNER/codex-switchaccount.git
+git clone https://github.com/saroo98/codex-switchaccount.git
 cd codex-switchaccount
 npm run install-skill
 ```
