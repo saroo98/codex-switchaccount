@@ -1,7 +1,7 @@
 # Codex Account Switcher Skill
 
 SwitchAccount is a global Codex skill for switching between multiple Codex
-accounts from the Codex `/` skill picker. You will be able to switch between your account only with the /SwitchAccount command. The skill wraps
+accounts from the Codex `/` skill picker. You will be able to switch between your accounts only with the /SwitchAccount command. The skill wraps
 [`codex-auth`](https://github.com/Sls0n/codex-account-switcher), saves named
 Codex account snapshots, and switches `~/.codex/auth.json` without exposing
 tokens.
