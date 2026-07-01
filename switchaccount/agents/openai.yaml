@@ -1,0 +1,4 @@
+interface:
+  display_name: "SwitchAccount"
+  short_description: "Switch saved Codex accounts"
+  default_prompt: "Use $switchaccount to switch between saved Codex accounts."

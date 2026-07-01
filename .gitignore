@@ -1,0 +1,11 @@
+node_modules/
+npm-debug.log*
+*.log
+.DS_Store
+Thumbs.db
+
+# Never commit local Codex auth state.
+.codex/
+auth.json
+accounts/
+*.local.*

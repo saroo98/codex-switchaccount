@@ -1,0 +1,26 @@
+{
+  "name": "codex-switchaccount",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reusable Codex skill for switching between saved Codex auth snapshots.",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "codex-skill",
+    "switchaccount",
+    "account-switcher",
+    "codex-auth",
+    "openai-codex",
+    "multiple-accounts",
+    "windows"
+  ],
+  "type": "module",
+  "scripts": {
+    "install-skill": "node install.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "validate:skill": "node validate-skill.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
