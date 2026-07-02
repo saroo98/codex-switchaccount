@@ -8,14 +8,33 @@ import { spawnSync } from "node:child_process";
 const repoRoot = resolve(import.meta.dirname, "..");
 const scriptPath = join(repoRoot, "switchaccount", "scripts", "switch-account.mjs");
 
-function makeFakeCodexAuth({ current = "Alpha", list = "* Alpha\n  Beta\n", includeCodexAuth = true } = {}) {
+function writeFakeAuthFiles(rootDir, authFiles) {
+  const authDir = join(rootDir, "codex-auth-home");
+  const accountsDir = join(authDir, "accounts");
+  mkdirSync(accountsDir, { recursive: true });
+
+  writeFileSync(join(authDir, "auth.json"), authFiles.active, "utf8");
+  for (const [account, contents] of Object.entries(authFiles.accounts ?? {})) {
+    writeFileSync(join(accountsDir, `${account}.json`), contents, "utf8");
+  }
+
+  return authDir;
+}
+
+function makeFakeCodexAuth({
+  current = "Alpha",
+  list = "* Alpha\n  Beta\n",
+  includeCodexAuth = true,
+  authFiles,
+} = {}) {
   const dir = mkdtempSync(join(tmpdir(), "switchaccount-test-"));
   const binDir = join(dir, "bin");
   mkdirSync(binDir);
   const callsPath = join(dir, "calls.txt");
+  const authDir = authFiles ? writeFakeAuthFiles(dir, authFiles) : join(dir, "missing-auth-home");
 
   if (!includeCodexAuth) {
-    return { binDir, callsPath };
+    return { authDir, binDir, callsPath };
   }
 
   if (process.platform === "win32") {
@@ -66,7 +85,7 @@ function makeFakeCodexAuth({ current = "Alpha", list = "* Alpha\n  Beta\n", incl
     );
   }
 
-  return { binDir, callsPath };
+  return { authDir, binDir, callsPath };
 }
 
 function runSwitchAccount(args = [], fakeOptions = {}) {
@@ -80,6 +99,7 @@ function runSwitchAccount(args = [], fakeOptions = {}) {
         fakeOptions.includeCodexAuth === false
           ? fake.binDir
           : `${fake.binDir}${delimiter}${process.env.PATH ?? ""}`,
+      CODEX_AUTH_DIR: fake.authDir,
     },
   });
 
@@ -102,7 +122,56 @@ test("without a target, switches from the current account to the other saved acc
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /Switched Codex auth to "Beta"\./);
   assert.match(result.stdout, /Windows tray/i);
-  assert.match(result.calls, /^current\r?\nlist\r?\nuse Beta/m);
+  assert.match(result.calls, /^current\r?\nlist\r?\nsave Alpha\r?\nuse Beta/m);
+});
+
+test("before switching, refreshes the current saved account snapshot", () => {
+  const result = runSwitchAccount(["switch", "Beta"], {
+    current: "Alpha",
+    list: "* Alpha\n  Beta\n",
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.calls, /save Alpha\r?\nuse Beta/);
+});
+
+test("does not rewrite the current snapshot when auth.json already matches it", () => {
+  const result = runSwitchAccount(["switch", "Beta"], {
+    current: "Alpha",
+    list: "* Alpha\n  Beta\n",
+    authFiles: {
+      active: "{\"account\":\"alpha\"}",
+      accounts: {
+        Alpha: "{\"account\":\"alpha\"}",
+        Beta: "{\"account\":\"beta\"}",
+      },
+    },
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Switched Codex auth to "Beta"\./);
+  assert.doesNotMatch(result.calls, /save Alpha/);
+  assert.match(result.calls, /use Beta/);
+});
+
+test("refuses to refresh a current label when auth.json matches a different saved account", () => {
+  const result = runSwitchAccount(["switch", "Beta"], {
+    current: "Alpha",
+    list: "* Alpha\n  Beta\n",
+    authFiles: {
+      active: "{\"account\":\"beta\"}",
+      accounts: {
+        Alpha: "{\"account\":\"alpha\"}",
+        Beta: "{\"account\":\"beta\"}",
+      },
+    },
+  });
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Refusing to refresh "Alpha"/);
+  assert.match(result.stderr, /matches saved account "Beta"/);
+  assert.doesNotMatch(result.calls, /save Alpha/);
+  assert.doesNotMatch(result.calls, /use Beta/);
 });
 
 test("setup saves the requested current-account label and explains the next login step", () => {
@@ -149,6 +218,37 @@ test("list command mode prints saved accounts and the current account", () => {
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /Saved Codex accounts: Alpha, Beta/);
   assert.match(result.stdout, /Current account: Alpha/);
+  assert.doesNotMatch(result.calls, /use /);
+});
+
+test("sync command mode refreshes the current saved account snapshot", () => {
+  const result = runSwitchAccount(["sync"], {
+    current: "Alpha",
+    list: "* Alpha\n  Beta\n",
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Saved current Codex auth tokens as "Alpha"\./);
+  assert.match(result.calls, /^current\r?\nlist\r?\nsave Alpha/m);
+  assert.doesNotMatch(result.calls, /use /);
+});
+
+test("sync command mode reports when the current saved account is already up to date", () => {
+  const result = runSwitchAccount(["sync"], {
+    current: "Alpha",
+    list: "* Alpha\n  Beta\n",
+    authFiles: {
+      active: "{\"account\":\"alpha\"}",
+      accounts: {
+        Alpha: "{\"account\":\"alpha\"}",
+        Beta: "{\"account\":\"beta\"}",
+      },
+    },
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /already up to date/);
+  assert.doesNotMatch(result.calls, /save Alpha/);
   assert.doesNotMatch(result.calls, /use /);
 });
 

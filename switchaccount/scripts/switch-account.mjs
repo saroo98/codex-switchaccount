@@ -1,12 +1,22 @@
 #!/usr/bin/env node
+import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 const ACCOUNT_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const codexAuthDir = process.env.CODEX_AUTH_DIR || join(homedir(), ".codex");
+const authPath = join(codexAuthDir, "auth.json");
+const accountsDir = join(codexAuthDir, "accounts");
 
 function runCodexAuth(args) {
-  const result = spawnSync("codex-auth", args, {
+  const command = process.platform === "win32" ? (process.env.ComSpec || "cmd.exe") : "codex-auth";
+  const commandArgs =
+    process.platform === "win32" ? ["/d", "/s", "/c", "codex-auth", ...args] : args;
+
+  const result = spawnSync(command, commandArgs, {
     encoding: "utf8",
-    shell: process.platform === "win32",
   });
 
   if (result.error?.code === "ENOENT") {
@@ -109,6 +119,26 @@ function fail(message, status = 1) {
   process.exit(status);
 }
 
+function hashFile(filePath) {
+  if (!existsSync(filePath)) {
+    return null;
+  }
+
+  return createHash("sha256").update(readFileSync(filePath)).digest("hex");
+}
+
+function matchingSavedAccountNames(savedAccounts) {
+  const activeHash = hashFile(authPath);
+  if (!activeHash) {
+    return [];
+  }
+
+  return savedAccounts.filter((account) => {
+    const savedHash = hashFile(join(accountsDir, `${account}.json`));
+    return savedHash === activeHash;
+  });
+}
+
 function printSavedAccounts(savedAccounts) {
   if (!savedAccounts.length) {
     process.stdout.write("No saved Codex accounts found.\n");
@@ -162,6 +192,38 @@ function setupAccount(label) {
   );
 }
 
+function saveCurrentSnapshot({ currentAccount, savedAccounts }) {
+  if (!currentAccount) {
+    fail("No current Codex account label is active. Run SwitchAccount setup <label> first.");
+  }
+
+  if (!savedAccounts.includes(currentAccount)) {
+    fail(
+      `Current account "${currentAccount}" is not in the saved account list. Run SwitchAccount setup <label> while logged into this account.`,
+    );
+  }
+
+  const matchingAccounts = matchingSavedAccountNames(savedAccounts);
+  if (matchingAccounts.includes(currentAccount)) {
+    return "already-current";
+  }
+
+  if (matchingAccounts.length > 0 && !matchingAccounts.includes(currentAccount)) {
+    fail(
+      `Refusing to refresh "${currentAccount}" before switching because auth.json currently matches saved account "${matchingAccounts.join(", ")}". Run SwitchAccount setup <correct-label> after logging into the account you want to save, or run codex-auth use <label> to realign the active label.`,
+    );
+  }
+
+  const saveResult = runCodexAuth(["save", currentAccount]);
+  process.stdout.write(saveResult.stdout);
+  process.stderr.write(saveResult.stderr);
+  if (saveResult.status !== 0) {
+    process.exit(saveResult.status);
+  }
+
+  return "saved";
+}
+
 function switchAccount(requestedAccount) {
   if (requestedAccount) {
     try {
@@ -180,6 +242,8 @@ function switchAccount(requestedAccount) {
     fail(error.message);
   }
 
+  saveCurrentSnapshot({ currentAccount, savedAccounts });
+
   const useResult = runCodexAuth(["use", target]);
   process.stdout.write(useResult.stdout);
   process.stderr.write(useResult.stderr);
@@ -191,6 +255,19 @@ function switchAccount(requestedAccount) {
   }
 
   process.exit(useResult.status);
+}
+
+function syncCurrentAccount() {
+  const { currentAccount, savedAccounts } = readCurrentAndSavedAccounts();
+  const result = saveCurrentSnapshot({ currentAccount, savedAccounts });
+  if (result === "already-current") {
+    process.stdout.write("Current account snapshot is already up to date.\n");
+    return;
+  }
+
+  process.stdout.write(
+    "Current account snapshot refreshed. Use this after a successful manual login or after Codex refreshes a session.\n",
+  );
 }
 
 function listAccounts() {
@@ -206,7 +283,7 @@ function main() {
   const [commandOrAccount, maybeAccount] = args;
 
   if (args.length > 2) {
-    fail("Usage: node switch-account.mjs [setup <label> | switch [account-name] | list | account-name]");
+    fail("Usage: node switch-account.mjs [setup <label> | switch [account-name] | list | sync | account-name]");
   }
 
   if (commandOrAccount === "setup") {
@@ -224,6 +301,14 @@ function main() {
       fail("Usage: node switch-account.mjs list");
     }
     listAccounts();
+    return;
+  }
+
+  if (commandOrAccount === "sync") {
+    if (maybeAccount) {
+      fail("Usage: node switch-account.mjs sync");
+    }
+    syncCurrentAccount();
     return;
   }
 
