@@ -14,6 +14,7 @@ No background sync, scheduled task, doctor command, stale-age warning, or automa
 - Reduce stale saved snapshots by syncing the active account immediately before every switch.
 - Let users switch from PowerShell, Command Prompt, or a normal terminal when Codex chat cannot send messages.
 - Keep the workflow simple: users run `SwitchAccount <label>` or `/SwitchAccount <label>`.
+- Treat `SwitchAccount`, `switchAccount`, and `switchaccount` as equivalent terminal command spellings.
 - Match saved account labels case-insensitively while preserving the saved label casing internally.
 - Avoid behavior that silently swaps accounts or runs maintenance in the background.
 
@@ -52,8 +53,8 @@ After a successful switch, the user still fully quits Codex Desktop, including t
 
 The installer writes terminal launchers:
 
-- Windows: `SwitchAccount.ps1`, `SwitchAccount.cmd`, `switchaccount.ps1`, `switchaccount.cmd`
-- macOS/Linux: `switchaccount`
+- Windows: `SwitchAccount.ps1` and `SwitchAccount.cmd`; Windows command lookup handles casing
+- macOS/Linux: `SwitchAccount`, `switchAccount`, and `switchaccount`
 
 These launchers call the installed skill helper script directly. They are intended only as an out-of-chat fallback and should not add separate behavior.
 

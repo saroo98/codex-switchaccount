@@ -9,6 +9,7 @@ const repoRoot = dirname(fileURLToPath(import.meta.url));
 const source = join(repoRoot, "switchaccount");
 const codexHome = process.env.CODEX_HOME || join(homedir(), ".codex");
 const destination = join(codexHome, "skills", "switchaccount");
+const launcherAliases = ["SwitchAccount", "switchAccount", "switchaccount"];
 
 if (!existsSync(source)) {
   console.error(`Skill source not found: ${source}`);
@@ -67,23 +68,25 @@ function installLauncher() {
       "",
     ].join("\n");
 
-    writeFileSync(join(globalBin, "SwitchAccount.cmd"), cmdLauncher, "utf8");
-    writeFileSync(join(globalBin, "switchaccount.cmd"), cmdLauncher, "utf8");
-    writeFileSync(join(globalBin, "SwitchAccount.ps1"), powershellLauncher, "utf8");
-    writeFileSync(join(globalBin, "switchaccount.ps1"), powershellLauncher, "utf8");
+    for (const alias of launcherAliases) {
+      writeFileSync(join(globalBin, `${alias}.cmd`), cmdLauncher, "utf8");
+      writeFileSync(join(globalBin, `${alias}.ps1`), powershellLauncher, "utf8");
+    }
+
     console.log(`Installed terminal launchers to ${globalBin}`);
     return;
   }
 
-  const launcherPath = join(globalBin, "switchaccount");
   const escapedScriptPath = scriptPath.replaceAll("'", "'\\''");
-  writeFileSync(
-    launcherPath,
-    ["#!/usr/bin/env sh", `exec node '${escapedScriptPath}' "$@"`, ""].join("\n"),
-    "utf8",
-  );
-  chmodSync(launcherPath, 0o755);
-  console.log(`Installed terminal launcher to ${launcherPath}`);
+  const launcher = ["#!/usr/bin/env sh", `exec node '${escapedScriptPath}' "$@"`, ""].join("\n");
+
+  for (const alias of launcherAliases) {
+    const launcherPath = join(globalBin, alias);
+    writeFileSync(launcherPath, launcher, "utf8");
+    chmodSync(launcherPath, 0o755);
+  }
+
+  console.log(`Installed terminal launchers to ${globalBin}`);
 }
 
 installLauncher();

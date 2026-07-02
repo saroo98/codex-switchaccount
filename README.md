@@ -23,9 +23,18 @@ npm run install-skill
 Restart Codex after installing so `SwitchAccount` appears globally in the `/`
 skill picker for every chat and project.
 
-The installer also adds a terminal command named `SwitchAccount` on Windows and
-`switchaccount` on macOS/Linux. It is global, so you do not need to `cd` into
-this repo after installing.
+The installer also adds global terminal commands, so you do not need to `cd`
+into this repo after installing. These command spellings all work the same:
+
+```powershell
+SwitchAccount work
+SwitchAccount WORK
+switchAccount work
+switchaccount work
+```
+
+Windows resolves command names case-insensitively. On macOS/Linux, the installer
+writes `SwitchAccount`, `switchAccount`, and `switchaccount` launchers.
 
 Use the terminal command when Codex chat is blocked by a usage limit:
 
@@ -99,7 +108,8 @@ Labels must be one word and may contain letters, numbers, dots, underscores, or
 dashes.
 
 Switching is case-insensitive. If you saved `Work`, then `SwitchAccount work`,
-`SwitchAccount Work`, and `SwitchAccount WORK` all resolve to `Work`.
+`SwitchAccount Work`, `SwitchAccount WORK`, `switchAccount work`, and
+`switchaccount work` all resolve to `Work`.
 
 Use `sync` after a successful manual login if you want to refresh the saved
 snapshot for the currently active account without switching.

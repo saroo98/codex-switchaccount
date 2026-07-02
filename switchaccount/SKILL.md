@@ -56,7 +56,7 @@ If Codex chat is blocked by a usage limit, the slash command cannot run because 
 - Windows PowerShell or Command Prompt: `SwitchAccount <label>` or `SwitchAccount`
 - macOS/Linux terminal: `switchaccount <label>` or `switchaccount`
 
-The terminal launcher is global after install. The user does not need to `cd` into the repo.
+The terminal launcher is global after install. The user does not need to `cd` into the repo. `SwitchAccount`, `switchAccount`, and `switchaccount` should be treated as equivalent command spellings.
 
 If Codex reports that a refresh token was revoked or the Codex session expired after switching, treat the target saved snapshot as invalid. `codex-auth` swaps JSON files on disk and does not validate refresh tokens with the server. A revoked target snapshot cannot be fixed by copying JSON again.
 
