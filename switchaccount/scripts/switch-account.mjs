@@ -81,16 +81,36 @@ function assertSafeAccountName(name) {
   }
 }
 
+function resolveSavedAccountName(savedAccounts, rawName, { missingMessage } = {}) {
+  const exactMatch = savedAccounts.find((name) => name === rawName);
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  const normalizedName = rawName.toLowerCase();
+  const caseInsensitiveMatches = savedAccounts.filter(
+    (name) => name.toLowerCase() === normalizedName,
+  );
+
+  if (caseInsensitiveMatches.length === 1) {
+    return caseInsensitiveMatches[0];
+  }
+
+  if (caseInsensitiveMatches.length > 1) {
+    throw new Error(
+      `Account "${rawName}" matches multiple saved accounts (${caseInsensitiveMatches.join(", ")}). Use the exact account label.`,
+    );
+  }
+
+  throw new Error(missingMessage ?? `Account "${rawName}" is not saved.`);
+}
+
 function chooseTarget({ requestedAccount, currentAccount, savedAccounts }) {
   if (requestedAccount) {
     assertSafeAccountName(requestedAccount);
-    if (!savedAccounts.includes(requestedAccount)) {
-      throw new Error(
-        `Account "${requestedAccount}" is not saved. Log into it once, then run: codex-auth save ${requestedAccount}`,
-      );
-    }
-
-    return requestedAccount;
+    return resolveSavedAccountName(savedAccounts, requestedAccount, {
+      missingMessage: `Account "${requestedAccount}" is not saved. Log into it once, then run: codex-auth save ${requestedAccount}`,
+    });
   }
 
   if (savedAccounts.length < 2) {
@@ -105,13 +125,22 @@ function chooseTarget({ requestedAccount, currentAccount, savedAccounts }) {
     );
   }
 
-  if (!currentAccount || !savedAccounts.includes(currentAccount)) {
+  if (!currentAccount) {
     throw new Error(
       `Current account is not one of the saved accounts (${savedAccounts.join(", ")}). Run this skill with an explicit account name.`,
     );
   }
 
-  return savedAccounts.find((name) => name !== currentAccount);
+  let currentSavedAccount;
+  try {
+    currentSavedAccount = resolveSavedAccountName(savedAccounts, currentAccount);
+  } catch {
+    throw new Error(
+      `Current account is not one of the saved accounts (${savedAccounts.join(", ")}). Run this skill with an explicit account name.`,
+    );
+  }
+
+  return savedAccounts.find((name) => name !== currentSavedAccount);
 }
 
 function fail(message, status = 1) {
@@ -197,24 +226,27 @@ function saveCurrentSnapshot({ currentAccount, savedAccounts }) {
     fail("No current Codex account label is active. Run SwitchAccount setup <label> first.");
   }
 
-  if (!savedAccounts.includes(currentAccount)) {
+  let currentSavedAccount;
+  try {
+    currentSavedAccount = resolveSavedAccountName(savedAccounts, currentAccount);
+  } catch {
     fail(
       `Current account "${currentAccount}" is not in the saved account list. Run SwitchAccount setup <label> while logged into this account.`,
     );
   }
 
   const matchingAccounts = matchingSavedAccountNames(savedAccounts);
-  if (matchingAccounts.includes(currentAccount)) {
+  if (matchingAccounts.includes(currentSavedAccount)) {
     return "already-current";
   }
 
-  if (matchingAccounts.length > 0 && !matchingAccounts.includes(currentAccount)) {
+  if (matchingAccounts.length > 0 && !matchingAccounts.includes(currentSavedAccount)) {
     fail(
-      `Refusing to refresh "${currentAccount}" before switching because auth.json currently matches saved account "${matchingAccounts.join(", ")}". Run SwitchAccount setup <correct-label> after logging into the account you want to save, or run codex-auth use <label> to realign the active label.`,
+      `Refusing to refresh "${currentSavedAccount}" before switching because auth.json currently matches saved account "${matchingAccounts.join(", ")}". Run SwitchAccount setup <correct-label> after logging into the account you want to save, or run codex-auth use <label> to realign the active label.`,
     );
   }
 
-  const saveResult = runCodexAuth(["save", currentAccount]);
+  const saveResult = runCodexAuth(["save", currentSavedAccount]);
   process.stdout.write(saveResult.stdout);
   process.stderr.write(saveResult.stderr);
   if (saveResult.status !== 0) {

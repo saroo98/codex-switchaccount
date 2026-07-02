@@ -198,6 +198,50 @@ test("with a target, switches to the requested saved account", () => {
   assert.match(result.calls, /use Gamma/);
 });
 
+test("with a target, matches saved account labels case-insensitively", () => {
+  const result = runSwitchAccount(["gamma"], {
+    current: "Alpha",
+    list: "* Alpha\n  Beta\n  Gamma\n",
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Switched Codex auth to "Gamma"\./);
+  assert.match(result.calls, /use Gamma/);
+});
+
+test("without a target, matches the current account label case-insensitively", () => {
+  const result = runSwitchAccount([], {
+    current: "alpha",
+    list: "* Alpha\n  Beta\n",
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Switched Codex auth to "Beta"\./);
+  assert.match(result.calls, /^current\r?\nlist\r?\nsave Alpha\r?\nuse Beta/m);
+});
+
+test("sync command mode saves the canonical saved account label when current label casing differs", () => {
+  const result = runSwitchAccount(["sync"], {
+    current: "alpha",
+    list: "* Alpha\n  Beta\n",
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Saved current Codex auth tokens as "Alpha"\./);
+  assert.match(result.calls, /^current\r?\nlist\r?\nsave Alpha/m);
+});
+
+test("refuses ambiguous case-insensitive account labels", () => {
+  const result = runSwitchAccount(["GAMMA"], {
+    current: "Alpha",
+    list: "* Alpha\n  Gamma\n  gamma\n",
+  });
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /matches multiple saved accounts/);
+  assert.doesNotMatch(result.calls, /use /);
+});
+
 test("switch command mode switches to the requested saved account", () => {
   const result = runSwitchAccount(["switch", "Beta"], {
     current: "Alpha",

@@ -14,6 +14,7 @@ No background sync, scheduled task, doctor command, stale-age warning, or automa
 - Reduce stale saved snapshots by syncing the active account immediately before every switch.
 - Let users switch from PowerShell, Command Prompt, or a normal terminal when Codex chat cannot send messages.
 - Keep the workflow simple: users run `SwitchAccount <label>` or `/SwitchAccount <label>`.
+- Match saved account labels case-insensitively while preserving the saved label casing internally.
 - Avoid behavior that silently swaps accounts or runs maintenance in the background.
 
 ## Non-Goals
@@ -40,6 +41,8 @@ SwitchAccount work
 ```
 
 In both cases, the helper first syncs the currently active account snapshot if `auth.json` changed, then switches to the requested saved account.
+
+Account labels are case-insensitive for switching. If the saved label is `Work`, then `work`, `Work`, and `WORK` all resolve to `Work`.
 
 After a successful switch, the user still fully quits Codex Desktop, including the Windows tray icon, and reopens it so Codex reloads `auth.json`.
 
@@ -101,6 +104,7 @@ Tests should cover:
 - switch calls `save <current>` before `use <target>` when `auth.json` changed
 - switch skips save when `auth.json` already matches the current saved snapshot
 - switch refuses when `auth.json` matches a different saved snapshot
+- switch resolves saved account labels case-insensitively
 - terminal launcher install writes PowerShell and CMD launchers on Windows
 - missing `codex-auth` prints install guidance
 - invalid labels fail before `codex-auth` is called

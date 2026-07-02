@@ -1,7 +1,8 @@
 # Codex Account Switcher Skill
 
 SwitchAccount is a global Codex skill for switching between multiple Codex
-accounts from the Codex `/` skill picker. You will be able to switch between your accounts only with the /SwitchAccount command. The skill wraps
+accounts from the Codex `/` skill picker or from a terminal when Codex chat is
+blocked. The skill wraps
 [`codex-auth`](https://github.com/Sls0n/codex-account-switcher), saves named
 Codex account snapshots, and switches `~/.codex/auth.json` without exposing
 tokens.
@@ -23,8 +24,16 @@ Restart Codex after installing so `SwitchAccount` appears globally in the `/`
 skill picker for every chat and project.
 
 The installer also adds a terminal command named `SwitchAccount` on Windows and
-`switchaccount` on macOS/Linux. Use it from PowerShell, Command Prompt, or a
-normal terminal if Codex chat is blocked by a usage limit.
+`switchaccount` on macOS/Linux. It is global, so you do not need to `cd` into
+this repo after installing.
+
+Use the terminal command when Codex chat is blocked by a usage limit:
+
+```powershell
+SwitchAccount work
+```
+
+Then fully quit Codex Desktop, including the Windows tray icon, and reopen it.
 
 ## First-Time Setup
 
@@ -89,6 +98,9 @@ node switchaccount/scripts/switch-account.mjs sync
 Labels must be one word and may contain letters, numbers, dots, underscores, or
 dashes.
 
+Switching is case-insensitive. If you saved `Work`, then `SwitchAccount work`,
+`SwitchAccount Work`, and `SwitchAccount WORK` all resolve to `Work`.
+
 Use `sync` after a successful manual login if you want to refresh the saved
 snapshot for the currently active account without switching.
 
@@ -130,7 +142,7 @@ Use `SwitchAccount setup <label>` instead of `sync` if you manually copied JSON
 or if the active label might not match the account currently logged into Codex.
 
 If Codex chat is blocked by a five-hour, weekly, or similar usage limit, run the
-terminal command instead of the slash command:
+terminal command from any directory instead of the slash command:
 
 ```powershell
 SwitchAccount

@@ -11,6 +11,7 @@ Switch Codex between saved `codex-auth` account snapshots without printing, edit
 
 - `codex-auth` must be installed globally: `npm i -g codex-auth`.
 - Account labels must be one word: letters, numbers, dots, underscores, or dashes.
+- Switching is case-insensitive, but the helper preserves the saved label casing when it calls `codex-auth`.
 - Account labels are chosen by the user. Do not assume any personal names.
 
 ## Interpret Invocation
@@ -54,6 +55,8 @@ If Codex chat is blocked by a usage limit, the slash command cannot run because 
 
 - Windows PowerShell or Command Prompt: `SwitchAccount <label>` or `SwitchAccount`
 - macOS/Linux terminal: `switchaccount <label>` or `switchaccount`
+
+The terminal launcher is global after install. The user does not need to `cd` into the repo.
 
 If Codex reports that a refresh token was revoked or the Codex session expired after switching, treat the target saved snapshot as invalid. `codex-auth` swaps JSON files on disk and does not validate refresh tokens with the server. A revoked target snapshot cannot be fixed by copying JSON again.
 
